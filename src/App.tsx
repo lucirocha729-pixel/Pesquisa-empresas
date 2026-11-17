@@ -10,6 +10,7 @@ import { LeadsTableView } from './components/LeadsTableView';
 import { LoginScreen } from './components/LoginScreen';
 import { SettingsView } from './components/SettingsView';
 import { Sidebar } from './components/Sidebar';
+import { ViraAppLogo } from './components/ViraAppLogo';
 import {
   ensureUserProfile,
   subscribeToCrmLeads,
@@ -72,6 +73,18 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (authLoading) {
+      document.title = 'VIRA APP – Pesquisa de Empresas';
+      return;
+    }
+    if (!user) {
+      document.title = 'VIRA APP – Pesquisa de Empresas | Acesso';
+      return;
+    }
+    document.title = `VIRA APP – Pesquisa de Empresas | ${TAB_TITLES[activeTab].title}`;
+  }, [authLoading, user, activeTab]);
+
+  useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       setAuthLoading(false);
@@ -132,10 +145,11 @@ export default function App() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-5 px-4">
+        <ViraAppLogo variant="light" size="lg" showSubtitle />
         <div className="flex items-center gap-2.5 text-sm font-medium text-slate-600">
-          <Loader2 className="w-5 h-5 animate-spin text-[#0A192F]" />
-          <span>Carregando Lead Finder Brasil...</span>
+          <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+          <span>Carregando VIRA APP – Pesquisa de Empresas...</span>
         </div>
       </div>
     );
@@ -181,16 +195,25 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setMobileMenuOpen(true)}
-                  className="lg:hidden p-2 -ml-1 rounded-lg text-slate-600 hover:bg-slate-100"
+                  className="lg:hidden p-2 -ml-1 rounded-lg text-slate-600 hover:bg-slate-100 cursor-pointer"
                   aria-label="Abrir menu lateral"
                 >
                   <Menu className="w-5 h-5" />
                 </button>
-                <div className="min-w-0">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('dashboard')}
+                  className="shrink-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-lg"
+                  aria-label="Ir para o início do VIRA APP"
+                >
+                  <ViraAppLogo variant="light" size="sm" showSubtitle={false} />
+                </button>
+                <span className="hidden sm:block h-6 w-px bg-slate-200 shrink-0" aria-hidden="true" />
+                <div className="hidden sm:block min-w-0">
                   <h1 className="text-base md:text-lg font-bold text-slate-900 truncate font-display">
                     {TAB_TITLES[activeTab].title}
                   </h1>
-                  <p className="hidden sm:block text-xs text-slate-500 truncate">
+                  <p className="hidden md:block text-xs text-slate-500 truncate">
                     {TAB_TITLES[activeTab].subtitle}
                   </p>
                 </div>
@@ -201,7 +224,7 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setActiveTab('buscador')}
-                    className="px-3.5 py-2 bg-[#0A192F] hover:bg-slate-800 text-white text-xs font-semibold rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer shadow-xs"
                   >
                     Buscar empresas
                   </button>
@@ -256,6 +279,18 @@ export default function App() {
                 <SettingsView onStatusUpdated={setApiConfigured} />
               )}
             </main>
+
+            {/* Rodapé Institucional */}
+            <footer className="border-t border-slate-200 bg-white/80 px-4 md:px-8 py-4">
+              <div className="max-w-[1440px] mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-slate-500">
+                <div className="flex items-center gap-2 font-medium text-slate-700">
+                  <span>VIRA APP – Pesquisa de Empresas</span>
+                </div>
+                <div>
+                  Inteligência comercial, prospecção B2B e CRM integrado
+                </div>
+              </div>
+            </footer>
           </div>
 
           <LeadDetailDrawer

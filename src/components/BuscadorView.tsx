@@ -550,7 +550,7 @@ export function BuscadorView({
                   }))
                 }
                 placeholder="Ex.: Lisboa, FL"
-                className="w-full h-10 px-3 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                className="w-full h-10 px-3 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
           )}
@@ -577,7 +577,7 @@ export function BuscadorView({
           ) : (
             <div>
               <label htmlFor="filter-city" className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Cidade <span className="text-emerald-700">*</span>
+                Cidade <span className="text-blue-600">*</span>
               </label>
               <input
                 id="filter-city"
@@ -585,7 +585,7 @@ export function BuscadorView({
                 value={filters.city}
                 onChange={(e) => handleCityChange(e.target.value)}
                 placeholder="Digite o nome da cidade"
-                className="w-full h-10 px-3 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                className="w-full h-10 px-3 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
           )}
@@ -664,7 +664,7 @@ export function BuscadorView({
                   setFilters((p) => ({ ...p, onlyWithoutWebsite: e.target.checked }));
                   setCurrentPage(1);
                 }}
-                className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
               />
               <span>Somente sem site informado no Google</span>
             </label>
@@ -677,7 +677,7 @@ export function BuscadorView({
                   setFilters((p) => ({ ...p, onlyWithPhone: e.target.checked }));
                   setCurrentPage(1);
                 }}
-                className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
               />
               <span>Somente com telefone</span>
             </label>
@@ -686,7 +686,7 @@ export function BuscadorView({
           <button
             type="submit"
             disabled={loading}
-            className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#0A192F] hover:bg-slate-800 disabled:opacity-60 text-white text-sm font-semibold rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-semibold rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer shadow-xs"
           >
             {loading ? (
               <>
@@ -781,7 +781,7 @@ export function BuscadorView({
                   type="button"
                   onClick={handleBatchSaveWithoutWebsite}
                   disabled={batchSaving}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-xs font-semibold rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-xs font-semibold rounded-lg transition-colors whitespace-nowrap cursor-pointer"
                 >
                   {batchSaving ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -963,7 +963,7 @@ export function BuscadorView({
                   type="button"
                   onClick={handleLoadMoreFromApi}
                   disabled={loadingMore}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 rounded-lg transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 rounded-lg transition-colors cursor-pointer"
                 >
                   {loadingMore && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   <span>Buscar próxima página na API</span>

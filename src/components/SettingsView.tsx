@@ -201,13 +201,13 @@ export function SettingsView({ onStatusUpdated }: SettingsViewProps) {
       {/* Conformidade e Termos de Uso */}
       <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-3">
         <div className="flex items-center gap-2.5">
-          <ShieldCheck className="w-4 h-4 text-emerald-700" />
+          <ShieldCheck className="w-4 h-4 text-blue-600" />
           <h3 className="text-base font-bold text-slate-900 font-display">
             Conformidade com os Termos do Google Maps Platform
           </h3>
         </div>
         <p className="text-xs text-slate-600 leading-relaxed">
-          O <strong>Lead Finder Brasil</strong> foi arquitetado para respeitar as políticas de armazenamento e licenciamento do Google Maps Platform. No Firestore são persistidos exclusivamente os dados próprios do seu CRM (etapa comercial, observações, data de contato, canal, ticket e nome de referência) vinculados ao <code className="font-mono text-slate-800">placeId</code> oficial. O uso da plataforma está sujeito aos{' '}
+          O <strong>VIRA APP – Pesquisa de Empresas</strong> foi arquitetado para respeitar as políticas de armazenamento e licenciamento do Google Maps Platform. No Firestore são persistidos exclusivamente os dados próprios do seu CRM (etapa comercial, observações, data de contato, canal, ticket e nome de referência) vinculados ao <code className="font-mono text-slate-800">placeId</code> oficial. O uso da plataforma está sujeito aos{' '}
           <a
             href="https://cloud.google.com/maps-platform/terms?utm_campaign=gmp_mcp_codeassist_v1_aistudio"
             target="_blank"

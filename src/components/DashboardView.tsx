@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { CrmLead, NavigationTab, SearchLog } from '../types/lead';
 import { CRM_STATUS_META } from './StatusLabels';
+import { ViraAppLogo } from './ViraAppLogo';
 
 interface DashboardViewProps {
   leads: CrmLead[];
@@ -116,19 +117,22 @@ export function DashboardView({
   return (
     <div className="space-y-8">
       {/* Cabeçalho de boas-vindas e CTA */}
-      <div className="bg-[#0A192F] text-white rounded-xl p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-        <div className="max-w-2xl">
-          <h2 className="text-xl md:text-2xl font-bold tracking-tight mb-2 font-display">
-            Visão geral da prospecção comercial
-          </h2>
-          <p className="text-sm text-slate-300 leading-relaxed">
-            Acompanhe em tempo real o volume de empresas analisadas no Google Maps, identifique perfis sem site informado e gerencie a evolução das negociações no CRM.
-          </p>
+      <div className="bg-gradient-to-r from-[#0A192F] via-[#0F2444] to-[#143361] text-white rounded-xl p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6 border border-blue-900/30">
+        <div className="max-w-2xl space-y-3">
+          <ViraAppLogo variant="dark" size="md" showSubtitle />
+          <div>
+            <h2 className="text-xl md:text-2xl font-bold tracking-tight mb-1.5 font-display">
+              Visão geral da prospecção comercial
+            </h2>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              Acompanhe em tempo real o volume de empresas analisadas no Google Maps, identifique perfis sem site informado e gerencie a evolução das negociações no CRM.
+            </p>
+          </div>
         </div>
         <button
           type="button"
           onClick={() => onNavigate('buscador')}
-          className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+          className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer shadow-sm"
         >
           <Search className="w-4 h-4" />
           <span>Nova pesquisa de empresas</span>
@@ -179,7 +183,7 @@ export function DashboardView({
             <button
               type="button"
               onClick={() => onNavigate('crm')}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-[#0A192F] hover:text-emerald-700 whitespace-nowrap cursor-pointer"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-[#0A192F] hover:text-blue-600 whitespace-nowrap cursor-pointer"
             >
               <span>Abrir CRM</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -237,7 +241,7 @@ export function DashboardView({
             <button
               type="button"
               onClick={() => onNavigate('buscador')}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-[#0A192F] hover:text-emerald-700 whitespace-nowrap cursor-pointer"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-[#0A192F] hover:text-blue-600 whitespace-nowrap cursor-pointer"
             >
               <span>Pesquisar</span>
               <ArrowRight className="w-3.5 h-3.5" />

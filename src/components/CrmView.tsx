@@ -104,7 +104,7 @@ export function CrmView({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar no CRM..."
-              className="w-full h-9 pl-9 pr-3 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full h-9 pl-9 pr-3 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
@@ -191,7 +191,7 @@ export function CrmView({
                             onClick={() => onOpenLeadDetail(lead)}
                             className="w-full text-left cursor-pointer group"
                           >
-                            <div className="font-semibold text-sm text-slate-900 group-hover:text-emerald-700 transition-colors leading-snug">
+                            <div className="font-semibold text-sm text-slate-900 group-hover:text-blue-700 transition-colors leading-snug">
                               {lead.crmName}
                             </div>
                             <div className="text-xs text-slate-500 mt-0.5 truncate">
@@ -231,7 +231,7 @@ export function CrmView({
                                 handleStageChange(lead, e.target.value as CrmStatus)
                               }
                               aria-label={`Mover ${lead.crmName} para etapa`}
-                              className="h-7 px-2 text-[11px] font-medium bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                              className="h-7 px-2 text-[11px] font-medium bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
                             >
                               <option value="novo">Mover: Novo</option>
                               <option value="contatado">Mover: Contatado</option>
@@ -243,7 +243,7 @@ export function CrmView({
                             <button
                               type="button"
                               onClick={() => onOpenLeadDetail(lead)}
-                              className="text-xs font-semibold text-[#0A192F] hover:text-emerald-700 cursor-pointer"
+                              className="text-xs font-semibold text-[#0A192F] hover:text-blue-600 cursor-pointer"
                             >
                               Abrir
                             </button>
@@ -273,7 +273,7 @@ export function CrmView({
                       <button
                         type="button"
                         onClick={() => onOpenLeadDetail(lead)}
-                        className="text-sm font-bold text-slate-900 hover:text-emerald-700 text-left cursor-pointer"
+                        className="text-sm font-bold text-slate-900 hover:text-blue-700 text-left cursor-pointer"
                       >
                         {lead.crmName}
                       </button>

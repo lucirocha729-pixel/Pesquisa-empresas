@@ -296,7 +296,7 @@ async function startServer() {
 
   // Healthcheck
   app.get('/api/health', (_req, res) => {
-    res.json({ ok: true, service: 'lead-finder-brasil' });
+    res.json({ ok: true, service: 'vira-app-pesquisa-de-empresas' });
   });
 
   // Status seguro da configuração (nunca expõe a chave)
@@ -806,7 +806,7 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Lead Finder Brasil server running at http://0.0.0.0:${PORT}`);
+    console.log(`VIRA APP – Pesquisa de Empresas server running at http://0.0.0.0:${PORT}`);
   });
 }
 

@@ -66,7 +66,7 @@ function escapeCsvCell(value: string | number): string {
   return str;
 }
 
-export function exportLeadsToCsv(leads: CrmLead[], filenamePrefix = 'leads-crm-brasil'): void {
+export function exportLeadsToCsv(leads: CrmLead[], filenamePrefix = 'vira-app-leads-crm'): void {
   const rows = buildExportRows(leads);
   if (rows.length === 0) return;
 
@@ -91,7 +91,7 @@ export function exportLeadsToCsv(leads: CrmLead[], filenamePrefix = 'leads-crm-b
   URL.revokeObjectURL(url);
 }
 
-export function exportLeadsToExcel(leads: CrmLead[], filenamePrefix = 'leads-crm-brasil'): void {
+export function exportLeadsToExcel(leads: CrmLead[], filenamePrefix = 'vira-app-leads-crm'): void {
   const rows = buildExportRows(leads);
   if (rows.length === 0) return;
 

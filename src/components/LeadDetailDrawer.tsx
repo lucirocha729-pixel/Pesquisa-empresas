@@ -228,7 +228,7 @@ export function LeadDetailDrawer({
                 href={mapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs font-semibold text-[#0A192F] hover:text-emerald-700 underline"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-[#0A192F] hover:text-blue-600 underline"
               >
                 <span>Abrir no Google Maps</span>
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -290,7 +290,7 @@ export function LeadDetailDrawer({
                   onChange={(e) => setCrmName(e.target.value)}
                   required
                   maxLength={180}
-                  className="w-full h-10 px-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full h-10 px-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -301,7 +301,7 @@ export function LeadDetailDrawer({
                 <select
                   value={crmStatus}
                   onChange={(e) => setCrmStatus(e.target.value as CrmStatus)}
-                  className="w-full h-10 px-3 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full h-10 px-3 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="novo">Novo</option>
                   <option value="contatado">Contatado</option>
@@ -320,7 +320,7 @@ export function LeadDetailDrawer({
                   onChange={(e) =>
                     setWebsiteClassification(e.target.value as WebsiteClassification)
                   }
-                  className="w-full h-10 px-3 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full h-10 px-3 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="SEM_SITE_INFORMADO_GOOGLE">SEM SITE INFORMADO NO GOOGLE</option>
                   <option value="VERIFICADO_SEM_SITE">Verificado sem site próprio</option>
@@ -337,7 +337,7 @@ export function LeadDetailDrawer({
                   type="date"
                   value={contactDate}
                   onChange={(e) => setContactDate(e.target.value)}
-                  className="w-full h-10 px-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full h-10 px-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -348,7 +348,7 @@ export function LeadDetailDrawer({
                 <select
                   value={contactChannel}
                   onChange={(e) => setContactChannel(e.target.value)}
-                  className="w-full h-10 px-3 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full h-10 px-3 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Selecionar canal...</option>
                   <option value="WhatsApp">WhatsApp</option>
@@ -369,7 +369,7 @@ export function LeadDetailDrawer({
                   onChange={(e) => setCustomPhone(e.target.value)}
                   placeholder="Ex.: (11) 99999-0000"
                   maxLength={40}
-                  className="w-full h-10 px-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full h-10 px-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -383,7 +383,7 @@ export function LeadDetailDrawer({
                   step={50}
                   value={estimatedTicket}
                   onChange={(e) => setEstimatedTicket(e.target.value)}
-                  className="w-full h-10 px-3 text-sm font-mono tabular-nums border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full h-10 px-3 text-sm font-mono tabular-nums border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -396,7 +396,7 @@ export function LeadDetailDrawer({
                   value={segment}
                   onChange={(e) => setSegment(e.target.value)}
                   maxLength={100}
-                  className="w-full h-10 px-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full h-10 px-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -411,7 +411,7 @@ export function LeadDetailDrawer({
                     onChange={(e) => setCity(e.target.value)}
                     placeholder="Cidade"
                     maxLength={100}
-                    className="col-span-2 h-10 px-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="col-span-2 h-10 px-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <input
                     type="text"
@@ -419,7 +419,7 @@ export function LeadDetailDrawer({
                     onChange={(e) => setState(e.target.value)}
                     placeholder="UF"
                     maxLength={50}
-                    className="col-span-1 h-10 px-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="col-span-1 h-10 px-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
@@ -434,7 +434,7 @@ export function LeadDetailDrawer({
                   onChange={(e) => setNotes(e.target.value)}
                   maxLength={3000}
                   placeholder="Anote detalhes do atendimento, decisor, necessidade de site institucional ou landing page..."
-                  className="w-full p-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full p-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
@@ -511,7 +511,7 @@ export function LeadDetailDrawer({
                     onChange={(e) => setNewLogNote(e.target.value)}
                     placeholder="Registrar novo contato, proposta enviada ou retorno..."
                     maxLength={1000}
-                    className="w-full h-9 px-3 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full h-9 px-3 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div className="flex items-center gap-2">
@@ -519,7 +519,7 @@ export function LeadDetailDrawer({
                     type="date"
                     value={newLogDate}
                     onChange={(e) => setNewLogDate(e.target.value)}
-                    className="w-full h-9 px-2 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full h-9 px-2 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
@@ -527,7 +527,7 @@ export function LeadDetailDrawer({
                 <button
                   type="submit"
                   disabled={addingLog || !newLogNote.trim()}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg cursor-pointer"
                 >
                   {addingLog ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />

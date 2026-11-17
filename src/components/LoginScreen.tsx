@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { signInWithPopup } from 'firebase/auth';
-import { Building2, Check, Compass, ShieldCheck } from 'lucide-react';
+import { Building2, Check, ShieldCheck } from 'lucide-react';
 import { auth, googleProvider } from '../lib/firebase';
+import { ViraAppLogo } from './ViraAppLogo';
 
 export function LoginScreen() {
   const [loading, setLoading] = useState(false);
@@ -27,40 +28,34 @@ export function LoginScreen() {
   return (
     <div className="min-h-screen bg-slate-50 grid lg:grid-cols-12">
       {/* Coluna Institucional Azul Escuro */}
-      <div className="lg:col-span-7 bg-[#0A192F] text-white p-8 md:p-14 lg:p-16 flex flex-col justify-between">
+      <div className="lg:col-span-7 bg-gradient-to-br from-[#071426] via-[#0A192F] to-[#12305C] text-white p-8 md:p-14 lg:p-16 flex flex-col justify-between">
         <div>
-          <div className="flex items-center gap-3 mb-14">
-            <div className="w-10 h-10 rounded-lg bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center text-emerald-400">
-              <Compass className="w-5 h-5" />
-            </div>
-            <span className="text-xl font-bold tracking-tight text-white font-display">
-              Lead Finder Brasil
-            </span>
+          <div className="mb-12">
+            <ViraAppLogo variant="dark" size="lg" showSubtitle />
           </div>
 
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-white leading-[1.15] max-w-xl text-balance mb-6">
-            Prospecção comercial B2B orientada a dados reais do Google Maps.
+            Pesquisa empresarial inteligente e prospecção B2B com dados reais.
           </h1>
           <p className="text-slate-300 text-base md:text-lg leading-relaxed max-w-xl mb-10">
-            Localize estabelecimentos por cidade, bairro e segmento que ainda não informaram um site
-            no perfil comercial do Google e conduza toda a negociação dentro de um CRM próprio.
+            Localize estabelecimentos por estado, cidade, bairro e segmento no Google Maps, identifique negócios sem site informado e conduza toda a negociação no CRM do VIRA APP.
           </p>
 
-          <div className="space-y-4 max-w-lg border-t border-white/10 pt-8">
+          <div className="space-y-4 max-w-lg border-t border-white/15 pt-8">
             <div className="flex items-start gap-3">
-              <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+              <Check className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
               <p className="text-sm text-slate-200 leading-relaxed">
                 Integração direta com a <strong className="font-semibold text-white">Google Places API (New)</strong> protegida no servidor, sem exposição de chaves no navegador.
               </p>
             </div>
             <div className="flex items-start gap-3">
-              <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+              <Check className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
               <p className="text-sm text-slate-200 leading-relaxed">
                 Classificação transparente de oportunidades sem website informado, pronta para verificação e abordagem comercial.
               </p>
             </div>
             <div className="flex items-start gap-3">
-              <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+              <Check className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
               <p className="text-sm text-slate-200 leading-relaxed">
                 CRM persistente no Firestore para gerenciar etapas, datas de contato, observações e exportação em CSV e Excel.
               </p>
@@ -68,15 +63,15 @@ export function LoginScreen() {
           </div>
         </div>
 
-        <div className="mt-12 pt-6 border-t border-white/10 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-400">
+        <div className="mt-12 pt-6 border-t border-white/15 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-300">
           <span className="inline-flex items-center gap-1.5">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <ShieldCheck className="w-4 h-4 text-blue-400" />
             Conformidade com os Termos do Google Maps Platform
           </span>
           <span aria-hidden="true">·</span>
           <span className="inline-flex items-center gap-1.5">
-            <Building2 className="w-4 h-4 text-slate-400" />
-            Uso exclusivo para prospecção comercial
+            <Building2 className="w-4 h-4 text-blue-300" />
+            VIRA APP – Pesquisa de Empresas
           </span>
         </div>
       </div>
@@ -84,12 +79,16 @@ export function LoginScreen() {
       {/* Coluna de Acesso */}
       <div className="lg:col-span-5 flex items-center justify-center p-6 md:p-12 bg-white">
         <div className="w-full max-w-md">
+          <div className="mb-8 lg:hidden">
+            <ViraAppLogo variant="light" size="md" showSubtitle />
+          </div>
+
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-slate-900 mb-2 font-display">
-              Acessar workspace
+            <h2 className="text-2xl font-bold text-[#0A192F] mb-2 font-display">
+              Acessar VIRA APP
             </h2>
             <p className="text-sm text-slate-600 leading-relaxed">
-              Entre com sua conta Google para sincronizar seus leads, histórico comercial e métricas de pesquisa com segurança.
+              Entre com sua conta Google para sincronizar suas pesquisas, leads e histórico comercial com segurança.
             </p>
           </div>
 
@@ -103,7 +102,7 @@ export function LoginScreen() {
             type="button"
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 px-5 py-3.5 bg-[#0A192F] hover:bg-slate-800 disabled:opacity-60 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
+            className="w-full flex items-center justify-center gap-3 px-5 py-3.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
           >
             <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
               <path

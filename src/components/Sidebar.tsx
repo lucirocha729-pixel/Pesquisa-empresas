@@ -1,7 +1,6 @@
 import React from 'react';
 import { User } from 'firebase/auth';
 import {
-  Compass,
   KanbanSquare,
   LayoutDashboard,
   LogOut,
@@ -11,6 +10,7 @@ import {
   X,
 } from 'lucide-react';
 import { NavigationTab } from '../types/lead';
+import { ViraAppLogo } from './ViraAppLogo';
 
 interface SidebarProps {
   activeTab: NavigationTab;
@@ -53,19 +53,18 @@ export function Sidebar({
   const content = (
     <div className="flex flex-col h-full bg-[#0A192F] text-slate-200 w-64 select-none">
       {/* Brand */}
-      <div className="h-16 px-5 flex items-center justify-between border-b border-white/10 shrink-0">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center text-emerald-400 shrink-0">
-            <Compass className="w-4 h-4" />
-          </div>
-          <span className="font-display font-bold text-base tracking-tight text-white truncate">
-            Lead Finder Brasil
-          </span>
-        </div>
+      <div className="h-16 px-4 flex items-center justify-between border-b border-white/10 shrink-0">
+        <button
+          type="button"
+          onClick={() => handleNavigate('dashboard')}
+          className="min-w-0 text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rounded-lg"
+        >
+          <ViraAppLogo variant="dark" size="sm" showSubtitle />
+        </button>
         <button
           type="button"
           onClick={onCloseMobile}
-          className="lg:hidden p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-white/10"
+          className="lg:hidden p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-white/10 cursor-pointer"
           aria-label="Fechar menu"
         >
           <X className="w-5 h-5" />
@@ -84,18 +83,18 @@ export function Sidebar({
               onClick={() => handleNavigate(item.id)}
               className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer whitespace-nowrap ${
                 isActive
-                  ? 'bg-emerald-500 text-slate-950 font-semibold'
+                  ? 'bg-blue-600 text-white font-semibold shadow-sm'
                   : 'text-slate-300 hover:text-white hover:bg-white/8'
               }`}
             >
               <span className="flex items-center gap-3 min-w-0">
-                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-slate-950' : 'text-slate-400'}`} />
+                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                 <span className="truncate">{item.label}</span>
               </span>
               {(item.id === 'leads' || item.id === 'crm') && leadsCount > 0 && (
                 <span
                   className={`text-xs font-mono tabular-nums ${
-                    isActive ? 'text-slate-900 font-semibold' : 'text-slate-400'
+                    isActive ? 'text-blue-100 font-semibold' : 'text-slate-400'
                   }`}
                 >
                   {leadsCount}
