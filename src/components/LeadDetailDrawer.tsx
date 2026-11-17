@@ -172,6 +172,18 @@ export function LeadDetailDrawer({
   };
 
   const formatTimestamp = (ts: unknown): string => {
+    if (typeof ts === 'number' && Number.isFinite(ts)) {
+      return new Date(ts).toLocaleString('pt-BR', {
+        dateStyle: 'short',
+        timeStyle: 'short',
+      });
+    }
+    if (typeof ts === 'string' && !Number.isNaN(Date.parse(ts))) {
+      return new Date(ts).toLocaleString('pt-BR', {
+        dateStyle: 'short',
+        timeStyle: 'short',
+      });
+    }
     if (
       ts &&
       typeof ts === 'object' &&

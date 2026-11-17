@@ -1,9 +1,9 @@
 import React from 'react';
 import { User } from 'firebase/auth';
 import {
+  Building2,
   KanbanSquare,
   LayoutDashboard,
-  LogOut,
   Search,
   Settings,
   Table2,
@@ -15,8 +15,7 @@ import { ViraAppLogo } from './ViraAppLogo';
 interface SidebarProps {
   activeTab: NavigationTab;
   onSelectTab: (tab: NavigationTab) => void;
-  user: User;
-  onSignOut: () => void;
+  user?: User | null;
   leadsCount: number;
   mobileOpen: boolean;
   onCloseMobile: () => void;
@@ -37,8 +36,7 @@ const NAV_ITEMS: Array<{
 export function Sidebar({
   activeTab,
   onSelectTab,
-  user,
-  onSignOut,
+  user = null,
   leadsCount,
   mobileOpen,
   onCloseMobile,
@@ -48,7 +46,7 @@ export function Sidebar({
     onCloseMobile();
   };
 
-  const userInitial = (user.displayName || user.email || 'U').charAt(0).toUpperCase();
+  const userInitial = (user?.displayName || user?.email || 'V').charAt(0).toUpperCase();
 
   const content = (
     <div className="flex flex-col h-full bg-[#0A192F] text-slate-200 w-64 select-none">
@@ -105,36 +103,40 @@ export function Sidebar({
         })}
       </nav>
 
-      {/* User Account Footer */}
+      {/* Workspace Footer */}
       <div className="p-4 border-t border-white/10 shrink-0">
-        <div className="flex items-center gap-3 mb-3">
-          {user.photoURL ? (
-            <img
-              src={user.photoURL}
-              alt={user.displayName || 'Avatar do usuário'}
-              referrerPolicy="no-referrer"
-              className="w-9 h-9 rounded-full object-cover border border-white/20 shrink-0"
-            />
-          ) : (
-            <div className="w-9 h-9 rounded-full bg-slate-800 border border-white/15 flex items-center justify-center text-xs font-semibold text-white shrink-0">
-              {userInitial}
+        {user ? (
+          <div className="flex items-center gap-3">
+            {user.photoURL ? (
+              <img
+                src={user.photoURL}
+                alt={user.displayName || 'Avatar'}
+                referrerPolicy="no-referrer"
+                className="w-9 h-9 rounded-full object-cover border border-white/20 shrink-0"
+              />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-slate-800 border border-white/15 flex items-center justify-center text-xs font-semibold text-white shrink-0">
+                {userInitial}
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-white truncate">
+                {user.displayName || 'VIRA APP'}
+              </p>
+              <p className="text-xs text-slate-400 truncate">{user.email}</p>
             </div>
-          )}
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-white truncate">
-              {user.displayName || 'Usuário'}
-            </p>
-            <p className="text-xs text-slate-400 truncate">{user.email}</p>
           </div>
-        </div>
-        <button
-          type="button"
-          onClick={onSignOut}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors cursor-pointer"
-        >
-          <LogOut className="w-3.5 h-3.5" />
-          <span>Sair da conta</span>
-        </button>
+        ) : (
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-blue-600/20 border border-blue-400/30 flex items-center justify-center text-blue-300 shrink-0">
+              <Building2 className="w-4 h-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-white truncate">VIRA APP</p>
+              <p className="text-xs text-slate-400 truncate">Pesquisa de Empresas</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
