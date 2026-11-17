@@ -290,7 +290,7 @@ function parseGoogleApiError(status: number, bodyText: string): {
   };
 }
 
-async function startServer() {
+export function createApp(): express.Express {
   const app = express();
   app.use(express.json({ limit: '1mb' }));
 
@@ -786,6 +786,12 @@ async function startServer() {
     }
   });
 
+  return app;
+}
+
+async function startServer() {
+  const app = createApp();
+
   // Vite middleware em desenvolvimento ou arquivos estáticos em produção
   const isProd = process.env.NODE_ENV === 'production';
   if (!isProd) {
@@ -810,7 +816,15 @@ async function startServer() {
   });
 }
 
-startServer().catch((err) => {
-  console.error('Failed to start server:', err);
-  process.exit(1);
-});
+const isDirectExecution =
+  typeof process !== 'undefined' &&
+  Array.isArray(process.argv) &&
+  Boolean(process.argv[1]) &&
+  path.resolve(process.argv[1]) === path.resolve(__filename);
+
+if (isDirectExecution && process.env.VERCEL !== '1') {
+  startServer().catch((err) => {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  });
+}

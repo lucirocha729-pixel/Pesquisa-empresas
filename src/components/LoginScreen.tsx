@@ -1,26 +1,35 @@
-import React, { useState } from 'react';
-import { signInWithPopup } from 'firebase/auth';
+import React, { useEffect, useState } from 'react';
 import { Building2, Check, ShieldCheck } from 'lucide-react';
-import { auth, googleProvider } from '../lib/firebase';
+import { mapFirebaseAuthError, signInWithGoogle } from '../lib/firebase';
 import { ViraAppLogo } from './ViraAppLogo';
 
-export function LoginScreen() {
+interface LoginScreenProps {
+  initialError?: string | null;
+  onClearInitialError?: () => void;
+}
+
+export function LoginScreen({ initialError = null, onClearInitialError }: LoginScreenProps) {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError);
+
+  useEffect(() => {
+    if (initialError) {
+      setError(initialError);
+    }
+  }, [initialError]);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError(null);
+    onClearInitialError?.();
     try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Falha ao autenticar com o Google.';
-      if (msg.includes('popup-closed-by-user')) {
-        setError('A janela de login foi fechada antes da conclusão. Tente novamente.');
-      } else {
-        setError(`Não foi possível entrar: ${msg}`);
+      const result = await signInWithGoogle();
+      if (result.method === 'redirect') {
+        return;
       }
-    } finally {
+      setLoading(false);
+    } catch (err) {
+      setError(mapFirebaseAuthError(err));
       setLoading(false);
     }
   };

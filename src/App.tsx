@@ -16,7 +16,7 @@ import {
   subscribeToCrmLeads,
   subscribeToSearchLogs,
 } from './lib/crmService';
-import { auth } from './lib/firebase';
+import { auth, consumeGoogleRedirectResult } from './lib/firebase';
 import { fetchApiConfigStatus } from './lib/placesApi';
 import {
   CrmLead,
@@ -51,6 +51,7 @@ const TAB_TITLES: Record<NavigationTab, { title: string; subtitle: string }> = {
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [redirectAuthError, setRedirectAuthError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<NavigationTab>('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -85,10 +86,20 @@ export default function App() {
   }, [authLoading, user, activeTab]);
 
   useEffect(() => {
+    let mounted = true;
+
+    consumeGoogleRedirectResult().then(({ errorMessage }) => {
+      if (mounted && errorMessage) {
+        setRedirectAuthError(errorMessage);
+      }
+    });
+
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!mounted) return;
       setUser(firebaseUser);
       setAuthLoading(false);
       if (firebaseUser) {
+        setRedirectAuthError(null);
         try {
           await ensureUserProfile(firebaseUser);
         } catch (err) {
@@ -96,7 +107,11 @@ export default function App() {
         }
       }
     });
-    return () => unsub();
+
+    return () => {
+      mounted = false;
+      unsub();
+    };
   }, []);
 
   useEffect(() => {
@@ -175,7 +190,10 @@ export default function App() {
       )}
 
       {!user ? (
-        <LoginScreen />
+        <LoginScreen
+          initialError={redirectAuthError}
+          onClearInitialError={() => setRedirectAuthError(null)}
+        />
       ) : (
         <div className="min-h-screen bg-slate-50 flex">
           <Sidebar
