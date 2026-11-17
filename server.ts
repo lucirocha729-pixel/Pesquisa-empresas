@@ -3,7 +3,7 @@ import express from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createApiApp } from './api/_apiApp.js';
+import { createApiApp } from './api/_apiApp.ts';
 
 dotenv.config();
 

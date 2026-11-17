@@ -574,6 +574,7 @@ export function createApiApp(): express.Express {
       return;
     }
 
+    const cleanRegion = String(regionCode || 'BR').trim().toUpperCase().slice(0, 2);
     const locationParts = [cleanNeighborhood, cleanCity, cleanState, cleanCountry].filter(Boolean);
     const textQuery = `${cleanSegment} em ${locationParts.join(', ')}`;
 
@@ -586,13 +587,34 @@ export function createApiApp(): express.Express {
     let finalNextPageToken: string | null = null;
 
     try {
+      const neighborhoodBounds = cleanNeighborhood && cleanCity
+        ? await resolveCityGeoBounds(
+            key,
+            `${cleanNeighborhood}, ${cleanCity}`,
+            cleanState,
+            cleanCountry,
+            cleanRegion
+          )
+        : {};
+
       for (let pageIndex = 0; pageIndex < maxPagesToFetch; pageIndex++) {
         const payload: Record<string, unknown> = {
           textQuery,
           pageSize: constantPageSize,
           languageCode: 'pt-BR',
-          regionCode: String(regionCode || 'BR').toUpperCase().slice(0, 2),
+          regionCode: cleanRegion,
         };
+
+        if (neighborhoodBounds.viewport) {
+          payload.locationRestriction = { rectangle: neighborhoodBounds.viewport };
+        } else if (neighborhoodBounds.center) {
+          payload.locationBias = {
+            circle: {
+              center: neighborhoodBounds.center,
+              radius: 3000.0,
+            },
+          };
+        }
 
         if (currentToken) {
           payload.pageToken = currentToken;
@@ -762,6 +784,41 @@ export function createApiApp(): express.Express {
       res.json({ items: resultMap, apiConfigured: true });
     }
   });
+
+  // Garante resposta JSON para rotas /api/* inexistentes
+  app.use('/api', (_req, res) => {
+    res.status(404).json({
+      errorCode: 'API_ROUTE_NOT_FOUND',
+      message: 'Endpoint da API não encontrado.',
+    });
+  });
+
+  // Garante resposta JSON para erros inesperados (ex: JSON inválido no corpo da requisição)
+  app.use(
+    (
+      err: unknown,
+      req: express.Request,
+      res: express.Response,
+      next: express.NextFunction
+    ) => {
+      if (!req.path.startsWith('/api')) {
+        next(err);
+        return;
+      }
+      if (res.headersSent) {
+        next(err);
+        return;
+      }
+      const isSyntaxError = err instanceof SyntaxError && 'body' in err;
+      const status = isSyntaxError ? 400 : 500;
+      res.status(status).json({
+        errorCode: isSyntaxError ? 'INVALID_JSON_BODY' : 'INTERNAL_SERVER_ERROR',
+        message: isSyntaxError
+          ? 'Formato de dados inválido enviado para a API.'
+          : 'Erro interno no servidor ao processar a solicitação.',
+      });
+    }
+  );
 
   return app;
 }

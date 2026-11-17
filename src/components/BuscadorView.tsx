@@ -10,6 +10,7 @@ import {
   Loader2,
   MapPin,
   Phone,
+  RotateCcw,
   Search,
   Settings,
   Star,
@@ -312,8 +313,7 @@ export function BuscadorView({
     }));
   };
 
-  const executeSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const runSearch = async () => {
     setError(null);
     setFeedbackMessage(null);
 
@@ -347,18 +347,22 @@ export function BuscadorView({
         withWebsite: response.stats.withWebsiteCount,
       });
 
-      await logSearchSession(userId, {
-        queryText: response.queryText,
-        country: filters.country,
-        state: filters.state,
-        city: filters.city,
-        neighborhood: filters.neighborhood,
-        segment: filters.segment,
-        totalFound: response.stats.totalReturned,
-        withoutWebsiteCount: response.stats.withoutWebsiteCount,
-        withWebsiteCount: response.stats.withWebsiteCount,
-        withPhoneCount: response.stats.withPhoneCount,
-      });
+      try {
+        await logSearchSession(userId, {
+          queryText: response.queryText,
+          country: filters.country,
+          state: filters.state,
+          city: filters.city,
+          neighborhood: filters.neighborhood,
+          segment: filters.segment,
+          totalFound: response.stats.totalReturned,
+          withoutWebsiteCount: response.stats.withoutWebsiteCount,
+          withWebsiteCount: response.stats.withWebsiteCount,
+          withPhoneCount: response.stats.withPhoneCount,
+        });
+      } catch (logErr) {
+        console.warn('Falha ao registrar log da pesquisa:', logErr);
+      }
     } catch (err) {
       if (err instanceof PlacesApiError) {
         setError({ message: err.message, code: err.errorCode });
@@ -370,6 +374,11 @@ export function BuscadorView({
     } finally {
       setLoading(false);
     }
+  };
+
+  const executeSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await runSearch();
   };
 
   const handleLoadMoreFromApi = async () => {
@@ -715,15 +724,26 @@ export function BuscadorView({
               <p className="text-xs text-red-800 mt-0.5">{error.message}</p>
             </div>
           </div>
-          {error.code === 'API_KEY_MISSING' || error.code === 'API_KEY_INVALID_OR_RESTRICTED' ? (
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
-              onClick={() => onNavigate('configuracoes')}
-              className="px-3.5 py-2 bg-red-800 text-white text-xs font-semibold rounded-lg hover:bg-red-700 whitespace-nowrap shrink-0 cursor-pointer"
+              onClick={() => void runSearch()}
+              disabled={loading}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-red-300 text-red-900 text-xs font-semibold rounded-lg hover:bg-red-100 whitespace-nowrap cursor-pointer"
             >
-              Verificar Configurações
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Tentar novamente</span>
             </button>
-          ) : null}
+            {error.code === 'API_KEY_MISSING' || error.code === 'API_KEY_INVALID_OR_RESTRICTED' ? (
+              <button
+                type="button"
+                onClick={() => onNavigate('configuracoes')}
+                className="px-3.5 py-2 bg-red-800 text-white text-xs font-semibold rounded-lg hover:bg-red-700 whitespace-nowrap cursor-pointer"
+              >
+                Verificar Configurações
+              </button>
+            ) : null}
+          </div>
         </div>
       )}
 
