@@ -1,0 +1,248 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    // Global Primitives & Hardened Helpers
+    // =========================================================================
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // =========================================================================
+    // Validation Blueprints (Strict Keys, Types, Bounds, Immutability)
+    // =========================================================================
+
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'displayName', 'email', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'displayName', 'email', 'photoURL', 'companyName', 'createdAt', 'updatedAt'])
+        && data.uid == userId
+        && data.uid == request.auth.uid
+        && isValidId(data.uid)
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 200
+        && (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 500))
+        && (!('companyName' in data) || (data.companyName is string && data.companyName.size() <= 120))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidLead(data, userId, leadId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'placeId', 'crmName', 'segment', 'city', 'state',
+          'neighborhood', 'websiteClassification', 'crmStatus', 'notes',
+          'contactDate', 'contactChannel', 'customPhone', 'estimatedTicket',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'placeId', 'crmName', 'segment', 'city', 'state',
+          'neighborhood', 'websiteClassification', 'crmStatus', 'notes',
+          'contactDate', 'contactChannel', 'customPhone', 'estimatedTicket',
+          'createdAt', 'updatedAt'
+        ])
+        && data.id == leadId
+        && isValidId(data.id)
+        && data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && isValidId(data.ownerId)
+        && data.placeId is string && data.placeId.size() >= 5 && data.placeId.size() <= 128 && data.placeId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.crmName is string && data.crmName.size() >= 1 && data.crmName.size() <= 180
+        && data.segment is string && data.segment.size() <= 100
+        && data.city is string && data.city.size() <= 100
+        && data.state is string && data.state.size() <= 50
+        && data.neighborhood is string && data.neighborhood.size() <= 100
+        && data.websiteClassification in [
+          'SEM_SITE_INFORMADO_GOOGLE',
+          'SITE_INFORMADO_GOOGLE',
+          'VERIFICADO_SEM_SITE',
+          'VERIFICADO_COM_SITE'
+        ]
+        && data.crmStatus in ['novo', 'contatado', 'interessado', 'cliente', 'descartado']
+        && data.notes is string && data.notes.size() <= 3000
+        && data.contactDate is string && data.contactDate.size() <= 32
+        && data.contactChannel is string && data.contactChannel.size() <= 40
+        && data.customPhone is string && data.customPhone.size() <= 40
+        && (data.estimatedTicket is int || data.estimatedTicket is float)
+        && data.estimatedTicket >= 0 && data.estimatedTicket <= 10000000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidHistoryEntry(data, userId, leadId, historyId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'leadId', 'actionType', 'fromStatus',
+          'toStatus', 'note', 'contactDate', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'leadId', 'actionType', 'fromStatus',
+          'toStatus', 'note', 'contactDate', 'createdAt'
+        ])
+        && data.id == historyId
+        && isValidId(data.id)
+        && data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && isValidId(data.ownerId)
+        && data.leadId == leadId
+        && isValidId(data.leadId)
+        && data.actionType in [
+          'lead_criado',
+          'status_alterado',
+          'contato_registrado',
+          'observacao_adicionada',
+          'dados_atualizados'
+        ]
+        && data.fromStatus is string && data.fromStatus.size() <= 30
+        && data.toStatus is string && data.toStatus.size() <= 30
+        && data.note is string && data.note.size() <= 1000
+        && data.contactDate is string && data.contactDate.size() <= 32
+        && data.createdAt is timestamp;
+    }
+
+    function isValidSearchLog(data, userId, searchId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'queryText', 'country', 'state', 'city',
+          'neighborhood', 'segment', 'totalFound', 'withoutWebsiteCount',
+          'withWebsiteCount', 'withPhoneCount', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'queryText', 'country', 'state', 'city',
+          'neighborhood', 'segment', 'totalFound', 'withoutWebsiteCount',
+          'withWebsiteCount', 'withPhoneCount', 'createdAt'
+        ])
+        && data.id == searchId
+        && isValidId(data.id)
+        && data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && isValidId(data.ownerId)
+        && data.queryText is string && data.queryText.size() >= 1 && data.queryText.size() <= 200
+        && data.country is string && data.country.size() <= 80
+        && data.state is string && data.state.size() <= 80
+        && data.city is string && data.city.size() <= 100
+        && data.neighborhood is string && data.neighborhood.size() <= 100
+        && data.segment is string && data.segment.size() <= 100
+        && (data.totalFound is int || data.totalFound is float) && data.totalFound >= 0 && data.totalFound <= 1000
+        && (data.withoutWebsiteCount is int || data.withoutWebsiteCount is float) && data.withoutWebsiteCount >= 0 && data.withoutWebsiteCount <= 1000
+        && (data.withWebsiteCount is int || data.withWebsiteCount is float) && data.withWebsiteCount >= 0 && data.withWebsiteCount <= 1000
+        && (data.withPhoneCount is int || data.withPhoneCount is float) && data.withPhoneCount >= 0 && data.withPhoneCount <= 1000
+        && data.createdAt is timestamp;
+    }
+
+    // =========================================================================
+    // Collection Match Rules
+    // =========================================================================
+
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId);
+      allow list: if false;
+      allow create: if isValidId(userId)
+        && isOwner(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isOwner(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'companyName', 'updatedAt']);
+      allow delete: if false;
+
+      match /leads/{leadId} {
+        allow get: if isValidId(userId) && isValidId(leadId) && isOwner(userId) && (resource == null || existing().ownerId == request.auth.uid);
+        allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isValidId(userId)
+          && isValidId(leadId)
+          && isOwner(userId)
+          && isValidLead(incoming(), userId, leadId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isValidId(userId)
+          && isValidId(leadId)
+          && isOwner(userId)
+          && isValidLead(incoming(), userId, leadId)
+          && incoming().id == existing().id
+          && incoming().ownerId == existing().ownerId
+          && incoming().placeId == existing().placeId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            // Action: Atualizacao de etapa comercial e contato
+            incoming().diff(existing()).affectedKeys().hasOnly(['crmStatus', 'contactDate', 'contactChannel', 'updatedAt'])
+            ||
+            // Action: Edicao de observacoes e ficha comercial
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'crmName', 'notes', 'customPhone', 'estimatedTicket',
+              'websiteClassification', 'segment', 'city', 'state',
+              'neighborhood', 'updatedAt'
+            ])
+            ||
+            // Action: Atualizacao completa de campos editaveis do CRM
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'crmName', 'crmStatus', 'contactDate', 'contactChannel',
+              'notes', 'customPhone', 'estimatedTicket', 'websiteClassification',
+              'segment', 'city', 'state', 'neighborhood', 'updatedAt'
+            ])
+          );
+        allow delete: if isValidId(userId) && isValidId(leadId) && isOwner(userId) && existing().ownerId == request.auth.uid;
+
+        match /history/{historyId} {
+          allow get: if isValidId(userId)
+            && isValidId(leadId)
+            && isValidId(historyId)
+            && isOwner(userId)
+            && (resource == null || existing().ownerId == request.auth.uid);
+          allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+          allow create: if isValidId(userId)
+            && isValidId(leadId)
+            && isValidId(historyId)
+            && isOwner(userId)
+            && isValidHistoryEntry(incoming(), userId, leadId, historyId)
+            && incoming().createdAt == request.time
+            && getAfter(/databases/$(database)/documents/users/$(userId)/leads/$(leadId)).data.ownerId == request.auth.uid;
+          allow update: if false;
+          allow delete: if isValidId(userId)
+            && isValidId(leadId)
+            && isValidId(historyId)
+            && isOwner(userId)
+            && existing().ownerId == request.auth.uid;
+        }
+      }
+
+      match /searchLogs/{searchId} {
+        allow get: if isValidId(userId) && isValidId(searchId) && isOwner(userId) && (resource == null || existing().ownerId == request.auth.uid);
+        allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isValidId(userId)
+          && isValidId(searchId)
+          && isOwner(userId)
+          && isValidSearchLog(incoming(), userId, searchId)
+          && incoming().createdAt == request.time;
+        allow update: if false;
+        allow delete: if isValidId(userId) && isValidId(searchId) && isOwner(userId) && existing().ownerId == request.auth.uid;
+      }
+    }
+  }
+}

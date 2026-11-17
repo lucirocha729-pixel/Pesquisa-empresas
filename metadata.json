@@ -1,0 +1,6 @@
+{
+  "name": "Lead Finder Brasil",
+  "description": "Plataforma SaaS de prospecção comercial B2B e CRM para identificar empresas no Google Maps sem site informado e gerenciar oportunidades de criação de sites.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
