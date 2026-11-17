@@ -616,10 +616,11 @@ export function BuscadorView({
             onRetry={() => void loadNeighborhoods(neighborhoodQuery)}
             emptyText={
               neighborhoodQuery.trim()
-                ? `Nenhum bairro encontrado em ${filters.city} para "${neighborhoodQuery.trim()}".`
+                ? `Nenhum bairro sugerido em ${filters.city} para "${neighborhoodQuery.trim()}".`
                 : `Digite o nome do bairro em ${filters.city} para filtrar.`
             }
             allowClear
+            allowCustomValue
             clearLabel="Pesquisar na cidade inteira"
             filterLocally={false}
             onSearchQueryChange={(q) => setNeighborhoodQuery(q)}
@@ -734,7 +735,10 @@ export function BuscadorView({
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Tentar novamente</span>
             </button>
-            {error.code === 'API_KEY_MISSING' || error.code === 'API_KEY_INVALID_OR_RESTRICTED' ? (
+            {error.code === 'API_KEY_MISSING' ||
+            error.code === 'API_KEY_INVALID_OR_RESTRICTED' ||
+            error.code === 'API_KEY_REFERRER_BLOCKED' ||
+            error.code === 'API_NOT_ENABLED' ? (
               <button
                 type="button"
                 onClick={() => onNavigate('configuracoes')}

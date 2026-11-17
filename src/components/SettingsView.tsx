@@ -18,23 +18,36 @@ interface SettingsViewProps {
 
 export function SettingsView({ onStatusUpdated }: SettingsViewProps) {
   const [status, setStatus] = useState<ApiStatusInfo | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [testResult, setTestResult] = useState<{
+    ok: boolean;
+    message: string;
+    geocodingMessage?: string;
+  } | null>(null);
 
   const loadStatus = async () => {
     setLoadingStatus(true);
+    setStatusError(null);
     try {
       const info = await fetchApiConfigStatus();
       setStatus(info);
       onStatusUpdated(info.placesApiConfigured);
+    } catch (err) {
+      setStatusError(
+        err instanceof Error
+          ? err.message
+          : 'Não foi possível verificar o status da API no servidor.'
+      );
+      onStatusUpdated(false);
     } finally {
       setLoadingStatus(false);
     }
   };
 
   useEffect(() => {
-    loadStatus();
+    void loadStatus();
   }, []);
 
   const handleTestConnection = async () => {
@@ -42,7 +55,11 @@ export function SettingsView({ onStatusUpdated }: SettingsViewProps) {
     setTestResult(null);
     try {
       const res = await testPlacesApiConnection();
-      setTestResult({ ok: true, message: res.message });
+      setTestResult({
+        ok: true,
+        message: res.message,
+        geocodingMessage: res.geocodingMessage,
+      });
     } catch (err) {
       setTestResult({
         ok: false,
@@ -63,10 +80,10 @@ export function SettingsView({ onStatusUpdated }: SettingsViewProps) {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-100">
           <div>
             <h2 className="text-lg font-bold text-slate-900 font-display">
-              Configuração segura da Google Places API (New)
+              Integração Google Maps Platform (Places New + Geocoding)
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              A chave da API permanece isolada no servidor Node.js/Express e nunca é enviada ao navegador.
+              A chave da API permanece isolada no servidor backend (<code className="font-mono">/api/*</code>) e nunca é enviada ao navegador.
             </p>
           </div>
 
@@ -81,7 +98,7 @@ export function SettingsView({ onStatusUpdated }: SettingsViewProps) {
             ) : (
               <Activity className="w-4 h-4" />
             )}
-            <span>Testar conexão com Places API</span>
+            <span>Testar conexão Google Maps</span>
           </button>
         </div>
 
@@ -89,6 +106,20 @@ export function SettingsView({ onStatusUpdated }: SettingsViewProps) {
           <div className="flex items-center gap-2 text-sm text-slate-500 py-4">
             <Loader2 className="w-4 h-4 animate-spin" />
             <span>Verificando variáveis de ambiente no servidor...</span>
+          </div>
+        ) : statusError ? (
+          <div className="rounded-lg p-4 border border-red-200 bg-red-50 text-xs text-red-900 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-red-700 shrink-0 mt-0.5" />
+              <span>{statusError}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => void loadStatus()}
+              className="px-3 py-1.5 bg-white border border-red-300 text-red-900 font-semibold rounded-md hover:bg-red-100 whitespace-nowrap cursor-pointer"
+            >
+              Tentar novamente
+            </button>
           </div>
         ) : status ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -110,7 +141,7 @@ export function SettingsView({ onStatusUpdated }: SettingsViewProps) {
                 )}
               </div>
               <div className="text-xs text-slate-600 space-y-1 font-mono">
-                <div>Variável ativa: {status.keySource || 'Nenhuma'}</div>
+                <div>Variável ativa: {status.keySource || 'Nenhuma (adicione GOOGLE_MAPS_API_KEY)'}</div>
                 <div>Identificador mascarado: {status.keyHint || '—'}</div>
               </div>
             </div>
@@ -118,7 +149,7 @@ export function SettingsView({ onStatusUpdated }: SettingsViewProps) {
             <div className="border border-slate-200 rounded-lg p-4 bg-slate-50/70 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-600">
-                  Proteção e limites do proxy
+                  APIs integradas &amp; Proteção
                 </span>
                 <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#0A192F]">
                   <Lock className="w-3.5 h-3.5" />
@@ -127,7 +158,10 @@ export function SettingsView({ onStatusUpdated }: SettingsViewProps) {
               </div>
               <div className="text-xs text-slate-600 space-y-1">
                 <div>
-                  Endpoint: <code className="font-mono text-slate-800">places:searchText (v1)</code>
+                  Places: <code className="font-mono text-slate-800">places:searchText / autocomplete (v1)</code>
+                </div>
+                <div>
+                  Geocoding: <code className="font-mono text-slate-800">maps.googleapis.com/maps/api/geocode/json</code>
                 </div>
                 <div>
                   Limite de taxa configurado:{' '}
@@ -153,7 +187,12 @@ export function SettingsView({ onStatusUpdated }: SettingsViewProps) {
             ) : (
               <AlertTriangle className="w-4 h-4 text-red-700 shrink-0 mt-0.5" />
             )}
-            <span className="leading-relaxed">{testResult.message}</span>
+            <div className="space-y-1 leading-relaxed">
+              <div>{testResult.message}</div>
+              {testResult.geocodingMessage && (
+                <div className="text-[11px] opacity-90">{testResult.geocodingMessage}</div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -163,34 +202,34 @@ export function SettingsView({ onStatusUpdated }: SettingsViewProps) {
         <div className="flex items-center gap-2.5">
           <KeyRound className="w-4 h-4 text-[#0A192F]" />
           <h3 className="text-base font-bold text-slate-900 font-display">
-            Como configurar a chave com segurança
+            Como configurar na Vercel e no Google Cloud com segurança
           </h3>
         </div>
 
         <ol className="list-decimal list-inside space-y-2.5 text-sm text-slate-600 leading-relaxed">
           <li>
-            No painel de <strong>Secrets / Variáveis de Ambiente</strong> do ambiente de execução, defina{' '}
+            No painel da Vercel (<strong>Settings &rarr; Environment Variables</strong>) ou nos Secrets do ambiente, adicione{' '}
             <code className="px-1.5 py-0.5 bg-slate-100 rounded text-xs font-mono text-slate-900">
               GOOGLE_MAPS_API_KEY
             </code>{' '}
-            (ou{' '}
-            <code className="px-1.5 py-0.5 bg-slate-100 rounded text-xs font-mono text-slate-900">
-              GOOGLE_PLACES_API_KEY
-            </code>
-            ). Nunca insira chaves em arquivos do frontend (<code className="font-mono text-xs">src/</code>).
+            para <strong>Production</strong> e <strong>Preview</strong>. Nunca coloque a chave no código-fonte ou com prefixo{' '}
+            <code className="font-mono text-xs">VITE_</code>.
           </li>
           <li>
-            Ative a <strong>Places API (New)</strong> no seu projeto do Google Cloud Console.
+            No Google Cloud Console, ative as APIs <strong>Places API (New)</strong> e <strong>Geocoding API</strong> no projeto vinculado ao faturamento.
           </li>
           <li>
-            Restrinja a chave de API especificamente para a <strong>Places API (New)</strong> e para o ambiente autorizado conforme as recomendações oficiais do Google Cloud:{' '}
+            Em <strong>API Restrictions</strong>, restrinja a chave apenas para <strong>Places API (New)</strong> e <strong>Geocoding API</strong>.{' '}
+            Importante: como todas as chamadas saem do servidor (<code className="font-mono text-xs">/api/*</code>),{' '}
+            <strong>não utilize restrição de HTTP Referrer</strong> na chave de servidor{' '}
+            <code className="font-mono text-xs">GOOGLE_MAPS_API_KEY</code> (caso contrário o Google retornará bloqueio de referenciador).{' '}
             <a
               href="https://docs.cloud.google.com/api-keys/docs/add-restrictions-api-keys?utm_campaign=gmp_mcp_codeassist_v1_aistudio"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-blue-700 hover:underline font-medium"
             >
-              <span>Documentação de restrições de API Key</span>
+              <span>Documentação oficial de restrições de API Key</span>
               <ExternalLink className="w-3 h-3" />
             </a>
             .

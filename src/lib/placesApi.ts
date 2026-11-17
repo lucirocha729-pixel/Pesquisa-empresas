@@ -59,11 +59,18 @@ export async function fetchApiConfigStatus(): Promise<ApiStatusInfo> {
   }
 }
 
-export async function testPlacesApiConnection(): Promise<{ ok: boolean; message: string }> {
+export async function testPlacesApiConnection(): Promise<{
+  ok: boolean;
+  message: string;
+  geocodingOk?: boolean;
+  geocodingMessage?: string;
+}> {
   try {
     const { status, data } = await safeFetchJson<{
       ok: boolean;
       message: string;
+      geocodingOk?: boolean;
+      geocodingMessage?: string;
       errorCode?: string;
     }>(
       '/api/places/test',
@@ -176,5 +183,58 @@ export async function hydratePlacesById(
     };
   } catch (error) {
     rethrowPlacesError(error, 'Erro ao consultar detalhes no Google Places.');
+  }
+}
+
+export async function geocodeLocation(params: {
+  address?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  regionCode?: string;
+}): Promise<{
+  formattedAddress: string;
+  placeId: string | null;
+  location: { lat: number; lng: number } | null;
+}> {
+  try {
+    const { status, data } = await safeFetchJson<{
+      ok?: boolean;
+      formattedAddress?: string;
+      placeId?: string | null;
+      location?: { lat: number; lng: number } | null;
+      errorCode?: string;
+      message?: string;
+    }>(
+      '/api/geocode',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(params),
+      },
+      'geocodificar endereço'
+    );
+
+    checkQuotaResponse(status, data?.errorCode);
+
+    if (status >= 400) {
+      throw new PlacesApiError(
+        data?.message || 'Erro ao converter endereço em coordenadas.',
+        data?.errorCode || 'GEOCODING_API_ERROR',
+        status
+      );
+    }
+
+    return {
+      formattedAddress: data?.formattedAddress || '',
+      placeId: data?.placeId || null,
+      location: data?.location || null,
+    };
+  } catch (error) {
+    rethrowPlacesError(error, 'Erro ao converter endereço em coordenadas.');
   }
 }

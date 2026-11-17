@@ -3,6 +3,7 @@ import express from 'express';
 const PLACES_SEARCH_TEXT_URL = 'https://places.googleapis.com/v1/places:searchText';
 const PLACES_AUTOCOMPLETE_URL = 'https://places.googleapis.com/v1/places:autocomplete';
 const PLACES_DETAILS_BASE_URL = 'https://places.googleapis.com/v1/places';
+const GEOCODING_API_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
 const GMP_ATTRIBUTION_ID = 'gmp_mcp_codeassist_v1_aistudio';
 
 const AUTOCOMPLETE_FIELD_MASK = [
@@ -106,6 +107,218 @@ function normalizeComparisonText(value: string): string {
     .trim();
 }
 
+interface GeocodeResolvedResult {
+  ok: boolean;
+  notFound?: boolean;
+  formattedAddress?: string;
+  placeId?: string;
+  bounds: CityGeoBounds;
+  errorCode?: string;
+  httpStatus?: number;
+  message?: string;
+}
+
+async function safeReadUpstreamJson<T>(
+  response: Response
+): Promise<{ ok: boolean; data: T | null; rawText: string }> {
+  const rawText = await response.text();
+  if (!rawText.trim()) {
+    return { ok: false, data: null, rawText };
+  }
+  try {
+    return { ok: true, data: JSON.parse(rawText) as T, rawText };
+  } catch {
+    return { ok: false, data: null, rawText };
+  }
+}
+
+function classifyGeocodingStatus(
+  status: string,
+  errorMessage?: string
+): { httpStatus: number; errorCode: string; message: string } {
+  const lowerMsg = (errorMessage || '').toLowerCase();
+
+  if (status === 'OVER_DAILY_LIMIT' || status === 'OVER_QUERY_LIMIT') {
+    return {
+      httpStatus: 429,
+      errorCode: 'QUOTA_EXCEEDED',
+      message:
+        'Limite de requisições ou faturamento da Google Geocoding API atingido. Verifique o faturamento no Google Cloud Console.',
+    };
+  }
+
+  if (status === 'REQUEST_DENIED') {
+    if (lowerMsg.includes('referer') || lowerMsg.includes('referrer')) {
+      return {
+        httpStatus: 403,
+        errorCode: 'API_KEY_REFERRER_BLOCKED',
+        message:
+          'A chave GOOGLE_MAPS_API_KEY possui restrição por HTTP Referrer, que bloqueia requisições feitas pelo servidor. No Google Cloud Console, remova a restrição por referenciador HTTP desta chave de servidor e utilize restrição por API (Places API (New) e Geocoding API).',
+      };
+    }
+    if (lowerMsg.includes('not authorized') || lowerMsg.includes('disabled') || lowerMsg.includes('not activated')) {
+      return {
+        httpStatus: 403,
+        errorCode: 'API_NOT_ENABLED',
+        message:
+          'A Geocoding API não está ativada ou autorizada para esta chave no projeto do Google Cloud Console.',
+      };
+    }
+    if (lowerMsg.includes('api key is invalid') || lowerMsg.includes('api key not valid')) {
+      return {
+        httpStatus: 403,
+        errorCode: 'API_KEY_INVALID_OR_RESTRICTED',
+        message:
+          'A chave GOOGLE_MAPS_API_KEY configurada no servidor é inválida. Verifique o valor nas variáveis de ambiente da Vercel.',
+      };
+    }
+    return {
+      httpStatus: 403,
+      errorCode: 'API_KEY_INVALID_OR_RESTRICTED',
+      message:
+        errorMessage ||
+        'Chave GOOGLE_MAPS_API_KEY recusada pela Google Geocoding API. Verifique permissões e restrições no Google Cloud.',
+    };
+  }
+
+  if (status === 'INVALID_REQUEST') {
+    return {
+      httpStatus: 400,
+      errorCode: 'INVALID_ARGUMENT',
+      message: errorMessage || 'Endereço inválido enviado para a Google Geocoding API.',
+    };
+  }
+
+  return {
+    httpStatus: 502,
+    errorCode: 'GEOCODING_API_ERROR',
+    message: errorMessage || `Erro retornado pela Google Geocoding API (${status}).`,
+  };
+}
+
+async function geocodeWithGoogleApi(
+  key: string,
+  address: string,
+  regionCode = 'BR'
+): Promise<GeocodeResolvedResult> {
+  const cleanAddress = address.trim();
+  if (!cleanAddress) {
+    return {
+      ok: false,
+      bounds: {},
+      httpStatus: 400,
+      errorCode: 'VALIDATION_ERROR',
+      message: 'Informe um endereço, bairro ou cidade para geocodificação.',
+    };
+  }
+
+  const cleanRegion = (regionCode || 'BR').trim().toUpperCase().slice(0, 2);
+  const params = new URLSearchParams({
+    address: cleanAddress,
+    language: 'pt-BR',
+    region: cleanRegion.toLowerCase(),
+    key,
+  });
+  if (/^[A-Z]{2}$/.test(cleanRegion)) {
+    params.set('components', `country:${cleanRegion}`);
+  }
+
+  try {
+    const response = await fetch(`${GEOCODING_API_URL}?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        'X-Goog-Maps-Solution-ID': GMP_ATTRIBUTION_ID,
+      },
+    });
+
+    const parsed = await safeReadUpstreamJson<{
+      status?: string;
+      error_message?: string;
+      results?: Array<{
+        formatted_address?: string;
+        place_id?: string;
+        geometry?: {
+          location?: { lat: number; lng: number };
+          viewport?: {
+            southwest?: { lat: number; lng: number };
+            northeast?: { lat: number; lng: number };
+          };
+        };
+      }>;
+    }>(response);
+
+    if (!parsed.ok || !parsed.data) {
+      return {
+        ok: false,
+        bounds: {},
+        httpStatus: response.status >= 400 ? response.status : 502,
+        errorCode: 'GEOCODING_INVALID_RESPONSE',
+        message: 'A Google Geocoding API retornou uma resposta inesperada.',
+      };
+    }
+
+    const apiStatus = parsed.data.status || (response.ok ? 'OK' : 'UNKNOWN_ERROR');
+    if (apiStatus === 'ZERO_RESULTS') {
+      return { ok: false, notFound: true, bounds: {} };
+    }
+
+    if (apiStatus !== 'OK') {
+      const classified = classifyGeocodingStatus(apiStatus, parsed.data.error_message);
+      return {
+        ok: false,
+        bounds: {},
+        httpStatus: classified.httpStatus,
+        errorCode: classified.errorCode,
+        message: classified.message,
+      };
+    }
+
+    const first = parsed.data.results?.[0];
+    if (!first?.geometry?.location) {
+      return { ok: false, notFound: true, bounds: {} };
+    }
+
+    const bounds: CityGeoBounds = {
+      center: {
+        latitude: first.geometry.location.lat,
+        longitude: first.geometry.location.lng,
+      },
+      viewport:
+        first.geometry.viewport?.southwest && first.geometry.viewport?.northeast
+          ? {
+              low: {
+                latitude: first.geometry.viewport.southwest.lat,
+                longitude: first.geometry.viewport.southwest.lng,
+              },
+              high: {
+                latitude: first.geometry.viewport.northeast.lat,
+                longitude: first.geometry.viewport.northeast.lng,
+              },
+            }
+          : undefined,
+    };
+
+    return {
+      ok: true,
+      formattedAddress: first.formatted_address || cleanAddress,
+      placeId: first.place_id,
+      bounds,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      bounds: {},
+      httpStatus: 502,
+      errorCode: 'NETWORK_ERROR',
+      message:
+        error instanceof Error
+          ? error.message
+          : 'Erro de rede ao conectar à Google Geocoding API.',
+    };
+  }
+}
+
 async function resolveCityGeoBounds(
   key: string,
   city: string,
@@ -120,6 +333,18 @@ async function resolveCityGeoBounds(
   }
 
   const locationQuery = [city, state, country].filter(Boolean).join(', ');
+
+  // 1. Tenta primeiro pela Geocoding API oficial (converte cidade/bairro em coordenadas e viewport)
+  const geocoded = await geocodeWithGoogleApi(key, locationQuery, regionCode);
+  if (geocoded.ok && (geocoded.bounds.viewport || geocoded.bounds.center)) {
+    cityBoundsCache.set(cacheKey, {
+      expiresAt: Date.now() + HYDRATE_CACHE_TTL_MS,
+      bounds: geocoded.bounds,
+    });
+    return geocoded.bounds;
+  }
+
+  // 2. Fallback seguro via Places API (New) caso a Geocoding API ainda não esteja habilitada no projeto
   try {
     const response = await fetch(PLACES_SEARCH_TEXT_URL, {
       method: 'POST',
@@ -141,7 +366,7 @@ async function resolveCityGeoBounds(
       return {};
     }
 
-    const data = (await response.json()) as {
+    const parsed = await safeReadUpstreamJson<{
       places?: Array<{
         location?: { latitude: number; longitude: number };
         viewport?: {
@@ -149,9 +374,9 @@ async function resolveCityGeoBounds(
           high: { latitude: number; longitude: number };
         };
       }>;
-    };
+    }>(response);
 
-    const first = data.places?.[0];
+    const first = parsed.data?.places?.[0];
     const bounds: CityGeoBounds = {
       center: first?.location,
       viewport: first?.viewport,
@@ -169,11 +394,11 @@ async function resolveCityGeoBounds(
 }
 
 function getServerPlacesApiKey(): { key: string | null; source: string | null } {
-  if (process.env.GOOGLE_PLACES_API_KEY && process.env.GOOGLE_PLACES_API_KEY.trim()) {
-    return { key: process.env.GOOGLE_PLACES_API_KEY.trim(), source: 'GOOGLE_PLACES_API_KEY' };
-  }
   if (process.env.GOOGLE_MAPS_API_KEY && process.env.GOOGLE_MAPS_API_KEY.trim()) {
     return { key: process.env.GOOGLE_MAPS_API_KEY.trim(), source: 'GOOGLE_MAPS_API_KEY' };
+  }
+  if (process.env.GOOGLE_PLACES_API_KEY && process.env.GOOGLE_PLACES_API_KEY.trim()) {
+    return { key: process.env.GOOGLE_PLACES_API_KEY.trim(), source: 'GOOGLE_PLACES_API_KEY' };
   }
   if (process.env.VITE_GOOGLE_MAPS_API_KEY && process.env.VITE_GOOGLE_MAPS_API_KEY.trim()) {
     return { key: process.env.VITE_GOOGLE_MAPS_API_KEY.trim(), source: 'VITE_GOOGLE_MAPS_API_KEY' };
@@ -244,21 +469,51 @@ function parseGoogleApiError(status: number, bodyText: string): {
     parsedMessage = bodyText;
   }
 
+  const lowerMsg = parsedMessage.toLowerCase();
+
   if (status === 429 || parsedStatus === 'RESOURCE_EXHAUSTED') {
     return {
       httpStatus: 429,
       errorCode: 'QUOTA_EXCEEDED',
-      message: 'Limite de requisições da API do Google Places atingido no momento. Aguarde antes de realizar novas buscas.',
+      message: 'Limite de requisições da Google Places API atingido no momento. Aguarde antes de realizar novas buscas.',
     };
   }
   if (status === 401 || status === 403 || parsedStatus === 'PERMISSION_DENIED') {
+    if (lowerMsg.includes('referer') || lowerMsg.includes('referrer')) {
+      return {
+        httpStatus: 403,
+        errorCode: 'API_KEY_REFERRER_BLOCKED',
+        message:
+          'A chave GOOGLE_MAPS_API_KEY está bloqueada por restrição de HTTP Referrer. Como as chamadas rodam no servidor (Vercel/Node.js), remova a restrição por referenciador HTTP no Google Cloud Console e use restrição por API (Places API (New) e Geocoding API).',
+      };
+    }
+    if (
+      lowerMsg.includes('has not been used in project') ||
+      lowerMsg.includes('is disabled') ||
+      lowerMsg.includes('not activated')
+    ) {
+      return {
+        httpStatus: 403,
+        errorCode: 'API_NOT_ENABLED',
+        message:
+          'A Places API (New) ainda não está ativada neste projeto do Google Cloud Console. Ative a Places API (New) e a Geocoding API no painel de APIs e Serviços.',
+      };
+    }
     return {
       httpStatus: 403,
       errorCode: 'API_KEY_INVALID_OR_RESTRICTED',
-      message: 'Chave da API do Google Places inválida, sem permissão ou com a Places API (New) desativada no projeto.',
+      message:
+        'Chave da API do Google Maps inválida, sem permissão ou com a Places API (New) desativada no projeto.',
     };
   }
   if (status === 400 || parsedStatus === 'INVALID_ARGUMENT') {
+    if (lowerMsg.includes('api key not valid')) {
+      return {
+        httpStatus: 403,
+        errorCode: 'API_KEY_INVALID_OR_RESTRICTED',
+        message: 'A chave GOOGLE_MAPS_API_KEY configurada no servidor é inválida. Verifique o valor nas variáveis de ambiente da Vercel.',
+      };
+    }
     return {
       httpStatus: 400,
       errorCode: 'INVALID_ARGUMENT',
@@ -289,20 +544,21 @@ export function createApiApp(): express.Express {
       keySource: source,
       keyHint: getMaskedHint(key),
       endpoint: PLACES_SEARCH_TEXT_URL,
+      geocodingEndpoint: GEOCODING_API_URL,
       attributionId: GMP_ATTRIBUTION_ID,
       rateLimitPerMinute: RATE_LIMIT_MAX_REQUESTS,
       cachePolicy: 'Apenas placeId e dados próprios do CRM são persistidos no Firestore em conformidade com os Termos do Google Maps Platform.',
     });
   });
 
-  // Teste seguro de conectividade com a Google Places API (New)
+  // Teste seguro de conectividade com Places API (New) e Geocoding API
   app.post('/api/places/test', async (req, res) => {
     const { key } = getServerPlacesApiKey();
     if (!key) {
       res.status(400).json({
         ok: false,
         errorCode: 'API_KEY_MISSING',
-        message: 'Chave da Google Places API não encontrada nas variáveis de ambiente do servidor.',
+        message: 'Variável GOOGLE_MAPS_API_KEY não encontrada no servidor. Adicione a chave nas variáveis de ambiente da Vercel.',
       });
       return;
     }
@@ -342,11 +598,30 @@ export function createApiApp(): express.Express {
         return;
       }
 
-      const data = await response.json();
+      const parsed = await safeReadUpstreamJson<{ places?: Array<{ id?: string }> }>(response);
+      if (!parsed.ok || !parsed.data) {
+        res.status(502).json({
+          ok: false,
+          errorCode: 'INVALID_UPSTREAM_RESPONSE',
+          message: 'A Google Places API (New) retornou uma resposta inválida.',
+        });
+        return;
+      }
+
+      // Testa também a Geocoding API para confirmar disponibilidade completa
+      const geocodeCheck = await geocodeWithGoogleApi(key, 'São Paulo, SP, Brasil', 'BR');
+      const geocodingMessage = geocodeCheck.ok
+        ? 'Geocoding API ativa e respondendo normalmente.'
+        : geocodeCheck.message || 'Geocoding API não habilitada (usando fallback via Places API).';
+
       res.json({
         ok: true,
-        message: 'Conexão validada com sucesso na Google Places API (New).',
-        sampleCount: Array.isArray(data.places) ? data.places.length : 0,
+        message: geocodeCheck.ok
+          ? 'Conexão validada com sucesso na Google Places API (New) e Geocoding API.'
+          : 'Places API (New) validada com sucesso. Observação sobre Geocoding API: ' + geocodingMessage,
+        sampleCount: Array.isArray(parsed.data.places) ? parsed.data.places.length : 0,
+        geocodingOk: geocodeCheck.ok,
+        geocodingMessage,
       });
     } catch (error) {
       res.status(502).json({
@@ -355,6 +630,75 @@ export function createApiApp(): express.Express {
         message: error instanceof Error ? error.message : 'Falha de rede ao conectar à Google Places API.',
       });
     }
+  });
+
+  // Geocodificação de endereço / cidade / bairro via Google Maps Geocoding API (server-side)
+  app.post('/api/geocode', async (req, res) => {
+    const { key } = getServerPlacesApiKey();
+    if (!key) {
+      res.status(503).json({
+        errorCode: 'API_KEY_MISSING',
+        message: 'A chave GOOGLE_MAPS_API_KEY não está configurada no servidor.',
+      });
+      return;
+    }
+
+    const clientIp = req.ip || 'local';
+    const rate = checkRateLimit(clientIp);
+    if (!rate.allowed) {
+      res.status(429).json({
+        errorCode: 'RATE_LIMITED',
+        message: `Limite de requisições atingido (${rate.retryAfterSeconds}s). Aguarde um instante.`,
+      });
+      return;
+    }
+
+    const {
+      address = '',
+      neighborhood = '',
+      city = '',
+      state = '',
+      country = 'Brasil',
+      regionCode = 'BR',
+    } = req.body || {};
+
+    const cleanAddress = String(address || '').trim();
+    const composed = cleanAddress || [neighborhood, city, state, country].map((v) => String(v || '').trim()).filter(Boolean).join(', ');
+
+    if (!composed) {
+      res.status(400).json({
+        errorCode: 'VALIDATION_ERROR',
+        message: 'Informe um endereço, bairro ou cidade para converter em coordenadas.',
+      });
+      return;
+    }
+
+    const result = await geocodeWithGoogleApi(key, composed, String(regionCode || 'BR'));
+    if (!result.ok) {
+      if (result.notFound) {
+        res.status(404).json({
+          errorCode: 'ZERO_RESULTS',
+          message: `Nenhuma coordenada encontrada para "${composed}".`,
+        });
+        return;
+      }
+      res.status(result.httpStatus || 502).json({
+        errorCode: result.errorCode || 'GEOCODING_API_ERROR',
+        message: result.message || 'Erro ao geocodificar localização.',
+      });
+      return;
+    }
+
+    res.json({
+      ok: true,
+      formattedAddress: result.formattedAddress,
+      placeId: result.placeId || null,
+      location: result.bounds.center
+        ? { lat: result.bounds.center.latitude, lng: result.bounds.center.longitude }
+        : null,
+      viewport: result.bounds.viewport || null,
+      source: 'geocoding_api',
+    });
   });
 
   // Sugestão de bairros via Google Places API (New) - Autocomplete delimitado à cidade/estado
@@ -410,101 +754,117 @@ export function createApiApp(): express.Express {
       );
 
       const hasGeoScope = Boolean(cityBounds.viewport || cityBounds.center);
-      const inputQuery = cleanQuery
-        ? hasGeoScope
-          ? cleanQuery
-          : `${cleanQuery}, ${cleanCity}`
-        : `Jardim, ${cleanCity}`;
-
-      const payload: Record<string, unknown> = {
-        input: inputQuery,
-        includedPrimaryTypes: ['(regions)'],
-        includedRegionCodes: [cleanRegion.toLowerCase()],
-        languageCode: 'pt-BR',
-        regionCode: cleanRegion.toLowerCase(),
-      };
-
-      if (cityBounds.viewport) {
-        payload.locationRestriction = { rectangle: cityBounds.viewport };
-      } else if (cityBounds.center) {
-        payload.locationBias = {
-          circle: {
-            center: cityBounds.center,
-            radius: 30000.0,
-          },
-        };
-      }
-
-      const apiResponse = await fetch(PLACES_AUTOCOMPLETE_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Key': key,
-          'X-Goog-FieldMask': AUTOCOMPLETE_FIELD_MASK,
-          'X-Goog-Maps-Solution-ID': GMP_ATTRIBUTION_ID,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!apiResponse.ok) {
-        const errText = await apiResponse.text();
-        const parsedErr = parseGoogleApiError(apiResponse.status, errText);
-        res.status(parsedErr.httpStatus).json({
-          errorCode: parsedErr.errorCode,
-          message: parsedErr.message,
-        });
-        return;
-      }
-
-      const json = (await apiResponse.json()) as {
-        suggestions?: Array<{
-          placePrediction?: {
-            placeId?: string;
-            text?: { text?: string };
-            structuredFormat?: {
-              mainText?: { text?: string };
-              secondaryText?: { text?: string };
-            };
-            types?: string[];
-          };
-        }>;
-      };
+      const queryCandidates = cleanQuery
+        ? [hasGeoScope ? cleanQuery : `${cleanQuery}, ${cleanCity}`]
+        : [`Centro, ${cleanCity}`, `Jardim, ${cleanCity}`, `Vila, ${cleanCity}`];
 
       const normalizedCity = normalizeComparisonText(cleanCity);
       const seenNames = new Set<string>();
       const neighborhoods: Array<{ name: string; subtitle: string; placeId: string }> = [];
 
-      for (const item of json.suggestions || []) {
-        const pred = item.placePrediction;
-        if (!pred?.placeId) continue;
+      for (const candidateInput of queryCandidates) {
+        const payload: Record<string, unknown> = {
+          input: candidateInput,
+          includedPrimaryTypes: ['(regions)'],
+          includedRegionCodes: [cleanRegion.toLowerCase()],
+          languageCode: 'pt-BR',
+          regionCode: cleanRegion.toLowerCase(),
+        };
 
-        const types = pred.types || [];
-        const isNeighborhoodType = types.some(
-          (t) => t === 'neighborhood' || t.startsWith('sublocality')
-        );
-        if (!isNeighborhoodType) {
-          continue;
+        if (cityBounds.viewport) {
+          payload.locationRestriction = { rectangle: cityBounds.viewport };
+        } else if (cityBounds.center) {
+          payload.locationBias = {
+            circle: {
+              center: cityBounds.center,
+              radius: 30000.0,
+            },
+          };
         }
 
-        const mainText = (pred.structuredFormat?.mainText?.text || pred.text?.text || '').trim();
-        const secondaryText = (pred.structuredFormat?.secondaryText?.text || '').trim();
-        const fullText = (pred.text?.text || '').trim();
+        const apiResponse = await fetch(PLACES_AUTOCOMPLETE_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': key,
+            'X-Goog-FieldMask': AUTOCOMPLETE_FIELD_MASK,
+            'X-Goog-Maps-Solution-ID': GMP_ATTRIBUTION_ID,
+          },
+          body: JSON.stringify(payload),
+        });
 
-        if (!mainText) continue;
-
-        const normalizedContext = normalizeComparisonText(`${secondaryText} ${fullText}`);
-        if (!normalizedContext.includes(normalizedCity)) {
-          continue;
-        }
-
-        const normalizedMain = normalizeComparisonText(mainText);
-        if (!seenNames.has(normalizedMain)) {
-          seenNames.add(normalizedMain);
-          neighborhoods.push({
-            name: mainText,
-            subtitle: secondaryText || `${cleanCity}${cleanState ? ` - ${cleanState}` : ''}`,
-            placeId: pred.placeId,
+        if (!apiResponse.ok) {
+          const errText = await apiResponse.text();
+          const parsedErr = parseGoogleApiError(apiResponse.status, errText);
+          res.status(parsedErr.httpStatus).json({
+            errorCode: parsedErr.errorCode,
+            message: parsedErr.message,
           });
+          return;
+        }
+
+        const parsed = await safeReadUpstreamJson<{
+          suggestions?: Array<{
+            placePrediction?: {
+              placeId?: string;
+              text?: { text?: string };
+              structuredFormat?: {
+                mainText?: { text?: string };
+                secondaryText?: { text?: string };
+              };
+              types?: string[];
+            };
+          }>;
+        }>(apiResponse);
+
+        if (!parsed.ok || !parsed.data) {
+          res.status(502).json({
+            errorCode: 'INVALID_UPSTREAM_RESPONSE',
+            message: 'A Google Places API retornou uma resposta inválida ao consultar bairros.',
+          });
+          return;
+        }
+
+        for (const item of parsed.data.suggestions || []) {
+          const pred = item.placePrediction;
+          if (!pred?.placeId) continue;
+
+          const types = pred.types || [];
+          const isNeighborhoodType = types.some(
+            (t) =>
+              t === 'neighborhood' ||
+              t.startsWith('sublocality') ||
+              t === 'colloquial_area' ||
+              t === 'administrative_area_level_3'
+          );
+          if (!isNeighborhoodType) {
+            continue;
+          }
+
+          const mainText = (pred.structuredFormat?.mainText?.text || pred.text?.text || '').trim();
+          const secondaryText = (pred.structuredFormat?.secondaryText?.text || '').trim();
+          const fullText = (pred.text?.text || '').trim();
+
+          if (!mainText) continue;
+
+          const normalizedContext = normalizeComparisonText(`${secondaryText} ${fullText}`);
+          if (!normalizedContext.includes(normalizedCity)) {
+            continue;
+          }
+
+          const normalizedMain = normalizeComparisonText(mainText);
+          if (!seenNames.has(normalizedMain)) {
+            seenNames.add(normalizedMain);
+            neighborhoods.push({
+              name: mainText,
+              subtitle: secondaryText || `${cleanCity}${cleanState ? ` - ${cleanState}` : ''}`,
+              placeId: pred.placeId,
+            });
+          }
+        }
+
+        if (cleanQuery || neighborhoods.length >= 4) {
+          break;
         }
       }
 
@@ -641,10 +1001,20 @@ export function createApiApp(): express.Express {
           return;
         }
 
-        const json = (await apiResponse.json()) as {
+        const parsedSearch = await safeReadUpstreamJson<{
           places?: RawGooglePlace[];
           nextPageToken?: string;
-        };
+        }>(apiResponse);
+
+        if (!parsedSearch.ok || !parsedSearch.data) {
+          res.status(502).json({
+            errorCode: 'INVALID_UPSTREAM_RESPONSE',
+            message: 'A Google Places API (New) retornou uma resposta inválida durante a pesquisa.',
+          });
+          return;
+        }
+
+        const json = parsedSearch.data;
 
         const normalizedBatch = (json.places || [])
           .map((item) => normalizeGooglePlace(item, cleanSegment))
@@ -759,7 +1129,11 @@ export function createApiApp(): express.Express {
           if (!resp.ok) {
             return;
           }
-          const raw = (await resp.json()) as RawGooglePlace;
+          const parsedDetail = await safeReadUpstreamJson<RawGooglePlace>(resp);
+          if (!parsedDetail.ok || !parsedDetail.data) {
+            return;
+          }
+          const raw = parsedDetail.data;
           const normalized = normalizeGooglePlace(raw, 'Empresa');
           if (normalized) {
             resultMap[placeId] = normalized;

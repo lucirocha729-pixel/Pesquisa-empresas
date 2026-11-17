@@ -118,6 +118,7 @@ export interface ApiStatusInfo {
   keySource: string | null;
   keyHint: string | null;
   endpoint: string;
+  geocodingEndpoint?: string;
   attributionId: string;
   rateLimitPerMinute: number;
   cachePolicy: string;
